@@ -1,0 +1,110 @@
+---
+title: "Predicting Exercise Manner from fitness device"
+author: "Bassam Abdelnabi"
+date: "Sept, 2019"
+output: html_document
+---
+
+# Synopsis
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+```{r, warning=FALSE,echo=FALSE}
+library(caret)
+library(dplyr)
+```
+
+# Getting the data
+```{r, cache=TRUE}
+#training data
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "training.csv", method = "curl")
+#test data
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", "testing.csv", method = "curl")
+train <- read.csv("training.csv")
+test <- read.csv("testing.csv")
+```
+
+# Exploring the data
+```{r}
+dim(train)
+# There are many variables (160) in this problem
+```
+
+# Cleaning the data
+```{r}
+#NAs in training set
+naTrain <- sum(is.na(train))
+#NA percentage in training set
+percentNATrain <- sum(is.na(train))/ (dim(train)[1] * dim(train)[2])
+#NAs in test set
+naTest <- sum(is.na(test))
+#NA percentage in test set
+percentNATest <- sum(is.na(test))/ (dim(test)[1] * dim(test)[2])
+```
+
+From the commands above, we notice there are many NA in this data set. We will assume that these
+values are not important and we will remove all of them.
+
+```{r}
+# completly NA columns in training set
+sum(colSums(is.na(train)) == nrow(train))
+# completly NA columns in test set
+sum(colSums(is.na(test)) == nrow(test))
+# keep columns that are not all NA in both
+keepCol <- (colSums(is.na(train)) < nrow(train)) & (colSums(is.na(test)) < nrow(test))
+train <- train[,keepCol]
+test <- test[,keepCol]
+dim(train)
+dim(test)
+
+# at this point the variables have been cut to 60 only. 
+
+# Finding near zero and zerp covariates and remove them as well
+nsv<-nearZeroVar(train,saveMetrics = TRUE)
+# Which variables are near zero variance. Confirm if physics dictate that they are not important
+nsv[nsv[,"nzv"] > 0, ] # we will remove the variable new_window as it is nzero
+# Which variables are zero. Confirm if physics dictate that they are not important
+nsv[nsv[,"zeroVar"] > 0, ] # there are no zero variables
+
+train<-select(train, -(new_window))
+test<-select(test,-(new_window))
+```
+
+The summary of the cleaning process is that the number of variables reduced from 160 to 60 based on NA. Then we removed once more variable becuase it was near zero and the data dropped to 59 variables.
+
+# Building the model
+```{r}
+library(glmnet)
+library(mlbench)
+library(psych)
+library(mlbench)
+
+# this is my custom function to perform cross validation, I will use 3 folds with 2 repeats
+custom <- trainControl(method = "repeatedcv",
+                       number = 3,
+                       repeats = 2)
+
+# will split the training data set into a training and testing data set since the testing data set provided is missing the classe variable
+
+inTrain<-createDataPartition(y=train$classe,p=0.7,list = FALSE)
+trainsub<-train[inTrain,]
+testsub<-train[-inTrain,]
+
+# we will start be allowing multiple cores to increase the modelling speed
+library(doParallel)
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+
+# I will use a random forest model. The tuning factor will be changed as a starting point from 2-10 
+rfModel <- train(classe~., trainsub, method='rf', 
+                 trControl=custom, 
+                 tuneGrid=expand.grid(mtry=2:7),importance=T)
+
+# let us examine the model
+rfModel
+
+# Prediction
+p1 <- predict(rfModel, testsub)
+accuracy <- confusionMatrix(p1,testsub$classe)$overall['Accuracy']
+
+```
+The model has more than 99% accuracy

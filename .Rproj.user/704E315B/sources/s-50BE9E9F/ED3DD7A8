@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1567938812769.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3048636840",
+    "id" : "ED3DD7A8",
+    "lastKnownWriteTime" : 1567938881,
+    "last_content_update" : 1567938881337,
+    "path" : "~/PracticalMachineLearningProject/PracticalMachineLearningProject/ProjectCourseMachineLearning.Rmd",
+    "project_path" : "ProjectCourseMachineLearning.Rmd",
+    "properties" : {
+        "cursorPosition" : "102,7",
+        "scrollLine" : "83"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
